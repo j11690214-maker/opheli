@@ -6,19 +6,25 @@
     <title>Ophélie's Sanctuary</title>
     <style>
         :root {
-            --bg-color: #fdf2f4;
+            --bg-gradient-1: #fdf2f4;
+            --bg-gradient-2: #fce4ec;
+            --bg-gradient-3: #f8bbd0;
             --card-bg: rgba(255, 255, 255, 0.85);
             --primary: #e6005c;
             --primary-soft: #ffb3c6;
             --text: #4a2c35;
             --accent: #ff80bf;
-            --gentle-bg: #2d1e23;
-            --gentle-card: #3d2b31;
+            --gentle-bg-1: #1a0f13;
+            --gentle-bg-2: #2d1e23;
+            --gentle-bg-3: #3d2b31;
+            --gentle-card: rgba(61, 43, 49, 0.90);
             --gentle-text: #f3d5dc;
         }
 
         body.gentle-mode {
-            --bg-color: var(--gentle-bg);
+            --bg-gradient-1: var(--gentle-bg-1);
+            --bg-gradient-2: var(--gentle-bg-2);
+            --bg-gradient-3: var(--gentle-bg-3);
             --card-bg: var(--gentle-card);
             --text: var(--gentle-text);
             --primary: #ff80bf;
@@ -29,14 +35,33 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            transition: background-color 0.4s, color 0.4s;
+            transition: background 0.5s ease, color 0.5s ease;
         }
 
         body {
-            background-color: var(--bg-color);
             color: var(--text);
             overflow: hidden;
             height: 100vh;
+            background: linear-gradient(-45deg, var(--bg-gradient-1), var(--bg-gradient-2), var(--bg-gradient-3), var(--bg-gradient-1));
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Animated Canvas Background for Floating Orbs */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
         }
 
         /* Fixed Navigation & Gentle Mode Toggle */
@@ -56,9 +81,9 @@
             padding: 8px 16px;
             border-radius: 20px;
             cursor: pointer;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(10px);
             font-weight: 600;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
         /* Snap Scroll Container */
@@ -67,6 +92,8 @@
             overflow-y: scroll;
             scroll-snap-type: y mandatory;
             scroll-behavior: smooth;
+            position: relative;
+            z-index: 1;
         }
 
         .slide {
@@ -89,8 +116,8 @@
             max-height: 85vh;
             overflow-y: auto;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.4);
             position: relative;
         }
@@ -132,6 +159,11 @@
             justify-content: center;
             font-size: 3rem;
             box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .envelope-container:hover {
+            transform: scale(1.05);
         }
 
         .letter-popout {
@@ -159,7 +191,7 @@
 
         @keyframes breathe {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.6); }
+            50% { transform: scale(1.5); }
         }
 
         /* Self-Care Checklist */
@@ -258,6 +290,9 @@
 </head>
 <body>
 
+    <!-- Background Canvas for Floating Particles -->
+    <canvas id="bg-canvas"></canvas>
+
     <div class="top-bar">
         <button class="btn-toggle" onclick="toggleGentleMode()">🕯️ Gentle Mode</button>
     </div>
@@ -354,10 +389,11 @@
         <section class="slide" id="slide-9">
             <div class="card">
                 <h2>Music & Soul</h2>
-                <p>Usher — Climax</p>
+                <p>Usher — Climax 🎶</p>
                 <div class="video-container">
-                    <iframe id="youtube-player" src="https://www.youtube.com/embed/nNTyfVh3nmU?enablejsapi=1" title="Usher - Climax" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    <iframe id="youtube-player" src="https://www.youtube.com/embed/nNTyfVh3nmU?enablejsapi=1&autoplay=1&mute=0" title="Usher - Climax" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                 </div>
+                <button class="btn-action" style="margin-top: 15px;" onclick="playUsherTrack()">Play / Resume Track 🎵</button>
             </div>
         </section>
 
@@ -448,6 +484,57 @@
     </div>
 
     <script>
+        // Floating Particle Background Animation
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 4 + 1;
+                this.speedX = Math.random() * 0.5 - 0.25;
+                this.speedY = Math.random() * -0.6 - 0.2;
+                this.opacity = Math.random() * 0.5 + 0.3;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.x < 0 || this.x > canvas.width) this.x = Math.random() * canvas.width;
+            }
+            draw() {
+                ctx.fillStyle = document.body.classList.contains('gentle-mode') 
+                    ? `rgba(255, 180, 200, ${this.opacity})` 
+                    : `rgba(230, 0, 92, ${this.opacity * 0.6})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 45; i++) {
+            particles.push(new Particle());
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
         function toggleGentleMode() {
             document.body.classList.toggle('gentle-mode');
         }
@@ -472,6 +559,11 @@
 
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
+        }
+
+        function playUsherTrack() {
+            const iframe = document.getElementById('youtube-player');
+            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
         }
 
         const notes = [
